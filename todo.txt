@@ -1,0 +1,502 @@
+# Machine Learning Based SQL Query Runtime Prediction System
+
+## Updated Complete Development Roadmap
+
+This roadmap follows a modular ML pipeline architecture:
+
+* Python scripts handle **data generation and feature extraction**
+* Jupyter notebooks handle **EDA, model training, and explainability**
+* FastAPI provides **runtime prediction API**
+* React frontend (optional) provides **user interface**
+
+Phases 1–3 are completed.
+
+---
+
+# PHASE 1 — Project Setup and Environment Configuration (Completed)
+
+Goal: Prepare development environment and project structure.
+
+Tasks completed:
+
+1. Created GitHub repository.
+2. Initialized Python virtual environment.
+3. Installed libraries:
+
+* duckdb
+* pandas
+* sqlglot
+* scikit-learn
+* shap
+* xgboost
+* fastapi
+* uvicorn
+* matplotlib
+* seaborn
+* jupyter
+
+4. Created project structure:
+
+```
+sql-query-runtime-predictor/
+
+data/
+queries/
+runner/
+features/
+pipeline/
+models/
+notebooks/
+api/
+
+README.md
+requirements.txt
+```
+
+5. Created base modules:
+
+```
+runner/query_runner.py
+runner/query_loader.py
+features/feature_extractor.py
+pipeline/setup_database.py
+pipeline/build_dataset.py
+api/app.py
+```
+
+---
+
+# PHASE 2 — Database Setup (TPC-H Benchmark) (Completed)
+
+Goal: Create benchmark dataset for query execution experiments.
+
+Tasks completed:
+
+1. Created DuckDB database
+
+```
+data/tpch.db
+```
+
+2. Installed and loaded TPC-H extension.
+
+3. Generated dataset:
+
+```
+CALL dbgen(sf=1)
+```
+
+4. Verified tables:
+
+* customer
+* orders
+* lineitem
+* nation
+* region
+* supplier
+* part
+* partsupp
+
+5. Verified row counts for all tables.
+
+---
+
+# PHASE 3 — Query Workload Preparation (Completed)
+
+Goal: Prepare SQL workload for experiments.
+
+Tasks completed:
+
+1. Created query directory
+
+```
+queries/
+```
+
+2. Added TPC-H queries
+
+```
+queries/q1.sql
+queries/q2.sql
+...
+queries/q22.sql
+```
+
+3. Implemented SQL query loader
+
+```
+runner/query_loader.py
+```
+
+4. Verified queries execute successfully in DuckDB.
+
+---
+
+# PHASE 4 — Automated Query Execution Pipeline
+
+Goal: Execute SQL queries repeatedly and record runtime metrics.
+
+Tasks:
+
+1. Implement automated query runner
+
+File:
+
+```
+runner/query_runner.py
+```
+
+Responsibilities:
+
+* connect to DuckDB
+* load query files
+* execute queries
+* measure runtime
+
+2. Execute each query multiple times (recommended 5–10 runs).
+
+3. Capture runtime using Python `time` module.
+
+4. Save results to dataset:
+
+```
+data/query_runtime_logs.csv
+```
+
+Columns:
+
+```
+query_id
+query_text
+execution_time
+run_number
+```
+
+---
+
+# PHASE 5 — Execution Plan Collection
+
+Goal: Capture execution plan information for each query.
+
+Tasks:
+
+1. Extend query runner to collect execution plans.
+
+2. Use DuckDB commands:
+
+```
+EXPLAIN
+EXPLAIN ANALYZE
+```
+
+3. Capture execution plan text.
+
+4. Store combined dataset:
+
+```
+data/query_execution_dataset.csv
+```
+
+Columns:
+
+```
+query_id
+query_text
+runtime
+execution_plan
+```
+
+---
+
+# PHASE 6 — Structural Feature Extraction
+
+Goal: Extract structural features from SQL queries.
+
+File:
+
+```
+features/feature_extractor.py
+```
+
+Use **sqlglot** parser.
+
+Extract features:
+
+* number_of_tables
+* number_of_joins
+* number_of_filters
+* aggregation_count
+* group_by_present
+* order_by_present
+* subquery_depth
+
+Convert features to numeric format.
+
+---
+
+# PHASE 7 — Execution Plan Feature Extraction
+
+Goal: Extract performance-related features from execution plans.
+
+Parse execution plan text to extract:
+
+* estimated_cost
+* rows_scanned
+* scan_count
+* join_count
+* operator_count
+* index_usage
+
+Combine these with structural features.
+
+---
+
+# PHASE 8 — Final Dataset Construction
+
+Goal: Build ML training dataset.
+
+File:
+
+```
+pipeline/build_dataset.py
+```
+
+Combine:
+
+* structural features
+* execution plan features
+* runtime metrics
+
+Output dataset:
+
+```
+data/features_dataset.csv
+```
+
+Example columns:
+
+```
+table_count
+join_count
+aggregation_count
+scan_count
+operator_count
+estimated_cost
+rows_scanned
+runtime
+```
+
+Perform:
+
+* missing value handling
+* optional normalization
+
+---
+
+# PHASE 9 — Exploratory Data Analysis (Notebook)
+
+Notebook:
+
+```
+notebooks/model_training.ipynb
+```
+
+Tasks:
+
+1. Load dataset
+
+```
+data/features_dataset.csv
+```
+
+2. Inspect dataset structure.
+
+3. Visualize runtime distribution.
+
+4. Generate plots:
+
+* runtime histogram
+* correlation heatmap
+* feature vs runtime scatter plots.
+
+5. Identify potential predictive features.
+
+---
+
+# PHASE 10 — Machine Learning Model Training (Notebook)
+
+Notebook:
+
+```
+notebooks/model_training.ipynb
+```
+
+Models:
+
+1. Linear Regression (baseline)
+2. Random Forest Regressor
+3. Gradient Boosting Regressor
+4. XGBoost Regressor
+
+Tasks:
+
+1. Split dataset using `train_test_split`.
+2. Train models.
+3. Evaluate performance.
+
+Metrics:
+
+* MAE
+* RMSE
+* R² Score
+
+4. Compare models and select best performer.
+
+---
+
+# PHASE 11 — Model Evaluation and Error Analysis (Notebook)
+
+Tasks:
+
+1. Plot predicted vs actual runtime.
+
+2. Analyze residual errors.
+
+3. Identify queries with high prediction error.
+
+4. Analyze relationship between query complexity and prediction accuracy.
+
+---
+
+# PHASE 12 — Explainability Layer (Notebook)
+
+Notebook:
+
+```
+notebooks/shap_analysis.ipynb
+```
+
+Tasks:
+
+1. Load trained model.
+
+2. Apply SHAP analysis.
+
+3. Generate:
+
+* feature importance plots
+* SHAP summary plot
+* SHAP dependency plots.
+
+4. Identify most influential query features.
+
+---
+
+# PHASE 13 — Model Export
+
+Export trained model.
+
+Notebook saves model using:
+
+```
+joblib.dump()
+```
+
+Output file:
+
+```
+models/runtime_prediction_model.pkl
+```
+
+---
+
+# PHASE 14 — Prediction API (Backend)
+
+Goal: Provide runtime prediction service.
+
+File:
+
+```
+api/app.py
+```
+
+Endpoint:
+
+```
+POST /predict
+```
+
+Input:
+
+SQL query.
+
+Process:
+
+1. Parse query.
+2. Extract structural features.
+3. Load trained model.
+4. Predict runtime.
+
+Output:
+
+```
+predicted_runtime
+```
+
+---
+
+# PHASE 15 — Frontend Integration (Optional)
+
+Goal: Create simple UI for prediction.
+
+Frontend:
+
+React application.
+
+Workflow:
+
+User enters SQL query → React → FastAPI → ML model → predicted runtime displayed.
+
+Possible UI features:
+
+* SQL query input box
+* predicted runtime display
+* query complexity metrics
+* feature importance visualization
+
+---
+
+# PHASE 16 — Final Evaluation and Demonstration
+
+Tasks:
+
+1. Run prediction on unseen SQL queries.
+
+2. Compare predicted vs actual runtime.
+
+3. Demonstrate explainability results.
+
+4. Prepare presentation/demo.
+
+---
+
+# PHASE 17 — Documentation and Final Deliverables
+
+Tasks:
+
+1. Complete README.
+
+2. Add architecture diagram.
+
+3. Document ML pipeline.
+
+4. Document dataset creation.
+
+Deliverables:
+
+* labeled dataset
+* trained ML model
+* Jupyter notebooks
+* prediction API
+* optional React UI
+* full project documentation

@@ -1,0 +1,7 @@
+SELECT p.p_partkey, p.p_name, ps.ps_supplycost, s.s_name
+            FROM part p
+            JOIN partsupp ps ON p.p_partkey = ps.ps_partkey
+            JOIN supplier s ON ps.ps_suppkey = s.s_suppkey
+            WHERE ps.ps_supplycost > 0.03
+            ORDER BY ps.ps_supplycost DESC
+            LIMIT 120
