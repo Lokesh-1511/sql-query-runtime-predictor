@@ -141,3 +141,31 @@ Status: Completed
 - Workload run completed with `40` runs per query.
 - Output dataset: `data/query_runtime_logs.csv`
 - Total training samples generated: `4000`
+
+## Phase 5 - Execution Plan Collection
+Date: 2026-03-12
+Status: Completed
+
+### Completed Work
+- Extended `runner/query_runner.py` with execution plan collection mode.
+- Added support to run DuckDB plan commands per catalog query:
+  - `EXPLAIN`
+  - `EXPLAIN ANALYZE`
+- Implemented helpers:
+  - `_explain_text(...)` to collect textual plan output
+  - `collect_execution_dataset(...)` to assemble per-query runtime + plan records
+  - `save_execution_dataset(...)` to persist results
+- Added CLI flags:
+  - `--collect-plans`
+  - `--execution-output-path`
+- Implemented output dataset generation:
+  - `data/query_execution_dataset.csv`
+  - columns: `query_id`, `query_text`, `runtime`, `execution_plan`
+- `execution_plan` field now stores both plan forms in one text blob with explicit sections:
+  - `[EXPLAIN]`
+  - `[EXPLAIN ANALYZE]`
+
+### Execution Outcome
+- Execution dataset generated for all `100` catalog queries.
+- Output file: `data/query_execution_dataset.csv`
+- Row count: `100`

@@ -261,3 +261,56 @@ Environment: `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.e
 - `python pipeline/generate_queries.py --target-count 100`
 - `python runner/query_runner.py --runs 40 --catalog-path queries/query_catalog.json`
 - Inline Python validation for catalog schema, distribution, runtime CSV integrity, and run-order randomization.
+
+## Phase 5 - Execution Plan Collection Tests
+Date: 2026-03-12
+Status: Passed
+Environment: `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.exe`
+
+### Test Cases and Results
+1. Query runner diagnostics after plan-mode extension
+- Target: `runner/query_runner.py`
+- Check: editor diagnostics / static checks
+- Result: Passed (no errors found)
+
+2. Execution plan dataset generation
+- Target: `runner/query_runner.py` with `--collect-plans`
+- Check: generate execution dataset from `queries/query_catalog.json`
+- Initial Result: Failed
+- Failure detail:
+  - `TabError: inconsistent use of tabs and spaces in indentation`
+- Remediation:
+  - Normalized indentation in `runner/query_runner.py`
+- Final Result: Passed
+- Output:
+  - `Saved query execution dataset to: data\\query_execution_dataset.csv`
+  - `Rows: 100`
+  - `Unique queries: 100`
+
+3. Execution dataset schema and quality checks
+- Target: `data/query_execution_dataset.csv`
+- Check:
+  - required columns exist
+  - row count equals catalog query count
+  - no nulls in required columns
+  - all runtime values positive
+- Result: Passed
+- Output:
+  - `rows=100`
+  - `columns=query_id,query_text,runtime,execution_plan`
+  - `has_required_columns=True`
+  - `query_count=100`
+  - `nulls_required=0`
+  - `non_positive_runtime=0`
+
+4. Plan text presence validation
+- Target: `data/query_execution_dataset.csv`
+- Check: execution plan text includes both explain sections for each row
+- Result: Passed
+- Output:
+  - `plan_has_explain=100`
+  - `plan_has_explain_analyze=100`
+
+### Commands Used
+- `python runner/query_runner.py --collect-plans --catalog-path queries/query_catalog.json`
+- Inline Python validation for execution dataset schema and plan markers.
