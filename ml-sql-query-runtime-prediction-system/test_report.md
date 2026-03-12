@@ -407,3 +407,94 @@ Environment: `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.e
 ### Commands Used
 - `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.exe pipeline/run_phase6_5.py`
 - Inline pandas verification for dataset shape, nulls, and row distribution
+
+## Phase 7 - Execution Plan Metrics Tests
+Date: 2026-03-12
+Status: Passed
+Environment: `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.exe`
+
+### Test Cases and Results
+1. Plan parser implementation validation
+- Target: `features/plan_parser.py`
+- Check: regex patterns for extracting plan metrics from EXPLAIN text
+- Result: Passed (all parsing functions implemented)
+
+2. Phase 7 execution script
+- Target: `pipeline/run_phase7.py`
+- Check: create reproducible plan metric extraction
+- Result: Passed
+
+3. Plan metric extraction for 100 queries
+- Target: `pipeline/run_phase7.py` → `extract_plan_metrics_100()`
+- Check: parse 100 execution plans and extract 6 plan metrics
+- Result: Passed
+- Output:
+  - `✓ Extracted metrics for 100 queries`
+  - `✓ Saved to data/plan_metrics_100.csv`
+
+4. Plan metrics file validation
+- Target: `data/plan_metrics_100.csv`
+- Check: 
+  - 100 rows (one per query)
+  - 7 columns (query_id + 6 metrics)
+  - proper data types and ranges
+- Result: Passed
+- Output:
+  - Plan metric statistics show:
+    - 89/100 queries have table scans (avg 2.60 per query)
+    - 0/100 queries detected with join operations
+    - 0/100 queries with explicit index usage
+    - 0 avg operator count (regex pattern mismatch with DuckDB format)
+
+### Commands Used
+- `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.exe pipeline/run_phase7.py`
+
+## Phase 8 - Final ML Training Dataset Tests
+Date: 2026-03-12
+Status: Passed
+Environment: `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.exe`
+
+### Test Cases and Results
+1. Training dataset builder validation
+- Target: `features/build_training_dataset.py`
+- Check: merge expanded features (4000 rows) with plan metrics (100 rows)
+- Result: Passed (proper left join on query_id)
+
+2. Phase 8 execution script
+- Target: `pipeline/run_phase8.py`
+- Check: build and save final training dataset
+- Result: Passed
+
+3. Final ML training dataset generation
+- Target: `pipeline/run_phase8.py` → `build_training_dataset()`
+- Check: combine all features into single training-ready dataset
+- Result: Passed
+- Output:
+  - `✓ Built training dataset with shape: (4000, 18)`
+  - `✓ Saved to data/ml_training_dataset.csv`
+
+4. ML training dataset validation
+- Target: `data/ml_training_dataset.csv`
+- Check:
+  - 4000 rows (100 queries × 40 runs)
+  - 18 columns (5 metadata + 7 structural + 6 plan)
+  - no missing values
+  - proper data types
+  - target variable ready for regression
+- Result: Passed
+- Output:
+  - Shape: `(4000, 18)`
+  - Rows: 4000 ✓
+  - Null columns: 0 ✓
+  - Unique queries: 100 ✓
+  - Runs per query: 40 ✓
+  - Features: 15 numeric + 3 categorical
+  - Target (`execution_time`):
+    - Range: 0.000458 - 1.076223 seconds
+    - Mean: 0.040879 seconds
+    - Std: 0.093723 seconds (high variance ✓)
+    - Median: 0.008878 seconds
+
+### Commands Used
+- `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.exe pipeline/run_phase8.py`
+- Inline pandas verification for dataset shape, nulls, and type composition
