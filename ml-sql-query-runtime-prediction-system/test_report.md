@@ -363,3 +363,47 @@ Environment: `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.e
 ### Commands Used
 - `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.exe pipeline/run_phase6.py`
 - Inline pandas verification for dataset schema and statistics
+
+## Phase 6.5 - Feature Expansion Tests
+Date: 2026-03-12
+Status: Passed
+Environment: `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.exe`
+
+### Test Cases and Results
+1. Feature expansion logic validation
+- Target: `features/expand_features.py`
+- Check: load 100-row features and 4000-row runtime logs, join on query_id
+- Result: Passed (correct join implemented)
+
+2. Phase 6.5 execution script setup
+- Target: `pipeline/run_phase6_5.py`
+- Check: create reproducible expansion script with validation
+- Result: Passed (script created with proper error handling)
+
+3. Feature expansion execution
+- Target: `pipeline/run_phase6_5.py` → `expand_features_to_runtime_logs()`
+- Check: expand features from 100 to 4000 rows via left join
+- Result: Passed
+- Output:
+  - `✓ Expanded from 100 to 4000 rows`
+  - `✓ Rows match: True`
+  - `✓ No nulls: True`
+
+4. Expanded features dataset validation
+- Target: `data/features_expanded_4000.csv`
+- Check:
+  - row count matches runtime logs (4000)
+  - all 18 columns present (5 metadata + 7 structural + 6 plan features)
+  - no missing values
+  - proper alignment across all runs
+- Result: Passed
+- Output:
+  - Shape: `(4000, 18)`
+  - Rows: 4000 (100 unique queries × 40 runs)
+  - Columns: `query_id, run_number, execution_time, query_category, tables_used, number_of_tables, number_of_joins, number_of_filters, aggregation_count, group_by_present, order_by_present, subquery_depth, estimated_cost, rows_scanned, operator_count, scan_count, join_count, index_usage`
+  - Missing values: 0 across all 18 columns
+  - Data integrity: All queries present with 40 runs each (sample validation: q043 has 40 rows, q042 has 40 rows)
+
+### Commands Used
+- `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.exe pipeline/run_phase6_5.py`
+- Inline pandas verification for dataset shape, nulls, and row distribution

@@ -207,3 +207,32 @@ Status: Completed
   - Join count range: 0-2 joins
   - 88% of queries have ORDER BY clause
   - 11% of queries have subqueries
+
+## Phase 6.5 - Expand Features to Match Runtime Logs
+Date: 2026-03-12
+Status: Completed
+
+### Problem Statement
+- Phase 6 generated 100-row features dataset (one per unique query)
+- Runtime logs contain 4000 rows (100 queries × 40 runs each)
+- ML training requires alignment: 4000 feature rows (one per runtime measurement)
+
+### Completed Work
+- Created `features/expand_features.py` with:
+  - `expand_features_to_runtime_logs()` to join features with runtime logs
+  - `validate_expansion()` to verify row count and null values
+  - `save_expanded_features()` to persist 4000-row dataset
+- Created `pipeline/run_phase6_5.py` expansion script
+- Implemented left join on `query_id` to broadcast 100 features across 4000 runtime measurements
+
+### Execution Outcome
+- Input: `100 rows (features) × 40 runs (runtime logs) = 4000 rows`
+- Output: `data/features_expanded_4000.csv`
+- Final shape: `(4000, 18)`
+  - Runtime/measurement metadata: `query_id`, `run_number`, `execution_time`, `query_category`, `tables_used` (5 cols)
+  - Structural features: `number_of_tables`, `number_of_joins`, `number_of_filters`, `aggregation_count`, `group_by_present`, `order_by_present`, `subquery_depth` (7 cols)
+  - Plan features: `estimated_cost`, `rows_scanned`, `operator_count`, `scan_count`, `join_count`, `index_usage` (6 cols)
+- Data quality:
+  - Row count: 4000 (100 unique queries, 40 runs each)
+  - Missing values: 0 across all columns
+  - All data types preserved and accurate
