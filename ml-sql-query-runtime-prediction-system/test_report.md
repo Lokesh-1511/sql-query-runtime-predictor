@@ -314,3 +314,52 @@ Environment: `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.e
 ### Commands Used
 - `python runner/query_runner.py --collect-plans --catalog-path queries/query_catalog.json`
 - Inline Python validation for execution dataset schema and plan markers.
+
+## Phase 6 - Structural Feature Extraction Tests
+Date: 2026-03-12
+Status: Passed
+Environment: `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.exe`
+
+### Test Cases and Results
+1. Feature extractor code quality check
+- Target: `features/feature_extractor.py`
+- Check: syntax, imports, type annotations
+- Result: Passed (all new functions have proper signatures)
+
+2. Phase 6 execution script setup
+- Target: `pipeline/run_phase6.py`
+- Check: create reproducible script to run feature extraction
+- Result: Passed (script created with proper error handling)
+
+3. Feature extraction pipeline execution
+- Target: `pipeline/run_phase6.py` → `process_execution_dataset()`
+- Check: run feature extraction on full `data/query_execution_dataset.csv`
+- Result: Passed
+- Output:
+  - `Messages: ✓ Generated 100 feature rows`
+  - `✓ Saved to data/features_dataset.csv`
+
+4. Features dataset validation
+- Target: `data/features_dataset.csv`
+- Check:
+  - row count equals catalog query count (100)
+  - all 9 required columns present
+  - no missing values
+  - feature statistics valid
+- Result: Passed
+- Output:
+  - Shape: `(100, 9)`
+  - Columns: `query_id, runtime, number_of_tables, number_of_joins, number_of_filters, aggregation_count, group_by_present, order_by_present, subquery_depth`
+  - Missing values: 0 across all columns
+  - Feature ranges (valid):
+    - `number_of_tables`: 1-3 (mean: 1.48)
+    - `number_of_joins`: 0-2 (mean: 0.49)
+    - `number_of_filters`: 0-5 (mean: 1.11)
+    - `aggregation_count`: 0-4 (mean: 0.63)
+    - `group_by_present`: 0-1 (mean: 0.31)
+    - `order_by_present`: 0-1 (mean: 0.88)
+    - `subquery_depth`: 0-1 (mean: 0.11)
+
+### Commands Used
+- `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.exe pipeline/run_phase6.py`
+- Inline pandas verification for dataset schema and statistics

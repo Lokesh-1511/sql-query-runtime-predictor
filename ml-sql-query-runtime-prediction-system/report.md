@@ -169,3 +169,41 @@ Status: Completed
 - Execution dataset generated for all `100` catalog queries.
 - Output file: `data/query_execution_dataset.csv`
 - Row count: `100`
+
+## Phase 6 - Structural Feature Extraction
+Date: 2026-03-12
+Status: Completed
+
+### Completed Work
+- Extended `features/feature_extractor.py` with execution dataset processing:
+  - `process_execution_dataset(...)` to load execution data and extract structural features
+  - `save_features_dataset(...)` to persist feature DataFrame
+- Created `pipeline/run_phase6.py` as reproducible execution script
+- Implemented feature extraction workflow:
+  - Load `data/query_execution_dataset.csv`
+  - Parse each query's SQL using `sqlglot` AST parser
+  - Extract structural features per query
+  - Combine with runtime metadata and save
+
+### Features Extracted
+- `number_of_tables`: Count of table references (exp.Table)
+- `number_of_joins`: Count of JOIN operations (exp.Join)
+- `number_of_filters`: Count of predicates in WHERE clauses
+- `aggregation_count`: Count of aggregate functions (SUM, AVG, COUNT, etc.)
+- `group_by_present`: Binary indicator (0/1) for GROUP BY presence
+- `order_by_present`: Binary indicator (0/1) for ORDER BY presence
+- `subquery_depth`: Count of subquery nesting levels
+
+### Execution Outcome
+- Features dataset generated for all `100` catalog queries
+- Output file: `data/features_dataset.csv`
+- Row count: `100`
+- Columns: `query_id`, `runtime`, `number_of_tables`, `number_of_joins`, `number_of_filters`, `aggregation_count`, `group_by_present`, `order_by_present`, `subquery_depth`
+- Data quality: No missing values, all 9 columns present and populated
+- Statistics:
+  - Mean runtime: 0.038 seconds
+  - Runtime std dev: 0.076 seconds (high variance across queries)
+  - Table count range: 1-3 tables
+  - Join count range: 0-2 joins
+  - 88% of queries have ORDER BY clause
+  - 11% of queries have subqueries
