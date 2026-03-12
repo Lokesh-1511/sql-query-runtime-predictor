@@ -566,3 +566,71 @@ Environment: `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.e
 
 ### Commands Used
 - `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.exe pipeline/run_phase10.py`
+
+## Phase 10.5 - Pre-Deployment Improvement Tests
+Date: 2026-03-12
+Status: Passed
+Environment: `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.exe`
+
+### Test Cases and Results
+1. Query complexity feature extraction
+- Target: `features/feature_extractor.py`
+- Check: add `query_length` and `token_count` to the structural feature dataset
+- Result: Passed
+- Output:
+  - `features_dataset.csv` regenerated with `11` columns
+
+2. DuckDB operator parsing improvements
+- Target: `features/plan_parser.py`
+- Check: detect `HASH_JOIN`, `FILTER`, `PROJECTION`, and aggregate operators
+- Result: Passed
+- Output:
+  - `Queries with joins: 32 / 100`
+  - `Queries with hash joins: 32 / 100`
+  - `Queries with filter operators: 61 / 100`
+  - `Queries with projections: 92 / 100`
+  - `Queries with aggregate operators: 24 / 100`
+
+3. Training dataset enrichment
+- Target: `features/build_training_dataset.py` and `pipeline/run_phase8.py`
+- Check: add interaction features and rebuild the final dataset
+- Result: Passed
+- Output:
+  - `ml_training_dataset.csv` shape updated to `(4000, 28)`
+  - `25` predictive columns before one-hot encoding
+
+4. Advanced training pipeline validation
+- Target: `pipeline/run_phase9.py`
+- Check: 5-fold CV, RandomizedSearchCV, improved evaluation, permutation importance
+- Result: Passed
+- Output:
+  - `Random Forest R² = 0.9053`
+  - `Random Forest CV R² = 0.8963`
+  - `XGBoost Tuned R² = 0.9049`
+  - `phase9_feature_importance.csv` saved successfully
+
+5. Explainability refresh
+- Target: `pipeline/run_phase10.py`
+- Check: regenerate SHAP outputs for the new best model
+- Result: Passed
+- Output:
+  - best model loaded as `Random Forest`
+  - SHAP outputs regenerated for `29` encoded features
+
+6. Optional 200-query generator validation
+- Target: `pipeline/generate_queries.py`
+- Check: generate a temporary balanced 200-query catalog without touching the main catalog
+- Result: Passed
+- Output:
+  - `Total valid queries: 200`
+  - category distribution: `44 / 64 / 24 / 24 / 22 / 22`
+  - `Validation failures: 0`
+
+### Commands Used
+- `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.exe pipeline/run_phase6.py`
+- `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.exe pipeline/run_phase6_5.py`
+- `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.exe pipeline/run_phase7.py`
+- `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.exe pipeline/run_phase8.py`
+- `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.exe pipeline/run_phase9.py`
+- `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.exe pipeline/run_phase10.py`
+- `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.exe pipeline/generate_queries.py --target-count 200 --queries-dir temp_queries_validation`

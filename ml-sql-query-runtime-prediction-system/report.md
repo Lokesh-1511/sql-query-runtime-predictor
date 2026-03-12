@@ -360,3 +360,47 @@ Status: Completed
 - Explained the held-out test split (`800` rows)
 - Produced global SHAP importance rankings for all `19` encoded features
 - Established an explainability path for demos, feature review, and deployment validation
+
+## Phase 10.5 - Pre-Deployment Modeling Improvements
+Date: 2026-03-12
+Status: Completed
+
+### Completed Work
+- Improved `features/plan_parser.py` with DuckDB-specific operator parsing for:
+  - `HASH_JOIN`
+  - `FILTER`
+  - `PROJECTION`
+  - `UNGROUPED_AGGREGATE`, `HASH_GROUP_BY`, `PERFECT_HASH_GROUP_BY`
+- Extended `features/feature_extractor.py` with query-text complexity features:
+  - `query_length`
+  - `token_count`
+- Extended `features/build_training_dataset.py` with interaction features:
+  - `join_filter_complexity`
+  - `join_table_ratio`
+  - `aggregation_density`
+  - `scan_join_interaction`
+- Strengthened `pipeline/run_phase9.py` with:
+  - 5-fold cross-validation via `cross_val_score`
+  - `RandomizedSearchCV` for XGBoost (`20` iterations)
+  - permutation importance plus `feature_importances_`
+  - predicted-vs-actual scatter and residual histogram
+- Updated `pipeline/generate_queries.py` to support validated generation up to `200` queries.
+
+### Execution Outcome
+- Rebuilt datasets:
+  - `data/features_dataset.csv` now includes query complexity features
+  - `data/plan_metrics_100.csv` now includes 10 plan metrics
+  - `data/ml_training_dataset.csv` now has shape `(4000, 28)`
+- Improved model performance:
+  - previous best `R² ≈ 0.84`
+  - new best `R² = 0.9053`
+  - best model changed from `XGBoost` to `Random Forest`
+  - cross-validation score for best model: `0.8963`
+- Top permutation-importance signals:
+  - `rows_scanned`
+  - `subquery_depth`
+  - `query_category_analytical_query`
+  - `operator_count`
+  - `query_length`
+- Optional workload expansion validated successfully:
+  - generated `200` balanced queries in a temporary catalog with no validation failures

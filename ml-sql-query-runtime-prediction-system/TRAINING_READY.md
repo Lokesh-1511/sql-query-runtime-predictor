@@ -1,6 +1,6 @@
 # 🚀 ML SQL Query Runtime Predictor - Ready for Training
 
-Your system is now **production-grade** and ready to train ML models. Here's what you have:
+Your system is now **production-grade** and the improved training pipeline is already validated.
 
 ---
 
@@ -9,7 +9,7 @@ Your system is now **production-grade** and ready to train ML models. Here's wha
 | Metric | Value |
 |--------|-------|
 | **Samples** | 4,000 |
-| **Features** | 8 effective (7 structural + 1 plan metric) |
+| **Features** | 29 encoded training features after preprocessing |
 | **Target Variable** | execution_time (seconds) |
 | **Missing Values** | 0% |
 | **Data Quality** | ✅ Excellent |
@@ -18,7 +18,7 @@ Your system is now **production-grade** and ready to train ML models. Here's wha
 
 ## 🎯 Critical Information
 
-### Effective Features (What Your Model Will Actually Use)
+### Effective Features (What Your Model Actually Uses)
 
 **Structural Features** (from SQL parsing via sqlglot):
 ```
@@ -31,9 +31,30 @@ Your system is now **production-grade** and ready to train ML models. Here's wha
 7. subquery_depth        - Binary (0-1)
 ```
 
-**Plan Feature** (from EXPLAIN analysis):
+**Additional query-complexity features:**
 ```
-8. scan_count            - Range: 0-6  ← ONLY RELIABLE PLAN METRIC
+8. query_length
+9. token_count
+```
+
+**Improved plan features:**
+```
+10. rows_scanned
+11. operator_count
+12. scan_count
+13. join_count
+14. hash_join_count
+15. filter_operator_count
+16. projection_count
+17. aggregate_operator_count
+```
+
+**Interaction features:**
+```
+18. join_filter_complexity
+19. join_table_ratio
+20. aggregation_density
+21. scan_join_interaction
 ```
 
 **Categorical (for encoding):**
@@ -41,16 +62,17 @@ Your system is now **production-grade** and ready to train ML models. Here's wha
 - query_category (6 categories)
 ```
 
-### Why Only 1 Plan Feature?
+### Current Best Model
 
-Your Phase 7 regex patterns didn't match DuckDB's output format for:
-- operator_count (DuckDB uses `SEQ_SCAN`, `HASH_JOIN`, not generic patterns)
-- rows_scanned (no cardinality info in basic EXPLAIN)
-- estimated_cost (DuckDB doesn't expose cost model)
-- join_count (Hash Join pattern not detected)
-- index_usage (TPC-H only uses full table scans)
+The improved Phase 9 pipeline selected:
 
-**This is fine!** Most ML projects don't have perfect features. Tree-based models will excel with what you have.
+```
+Random Forest
+R² = 0.9053
+Cross-validation R² = 0.8963
+MAE = 0.006291
+RMSE = 0.022349
+```
 
 ---
 
@@ -84,13 +106,13 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 
 ## 📈 Expected Model Performance
 
-Based on 4000 samples with 8 features:
+Based on the improved dataset and training pipeline:
 
 | Model | R² (Typical) | Why |
 |-------|--------------|-----|
 | Linear Regression | 0.45–0.60 | Assumes linearity (fails here) |
-| **Random Forest** | **0.75–0.90** | ✅ Good, handles non-linearity |
-| **XGBoost** | **0.85–0.93** | ✅ Best - gradient boosting is powerful |
+| **Random Forest** | **0.9053** | ✅ Current best |
+| **XGBoost** | **0.9049** | ✅ Very close |
 | **LightGBM** | **0.85–0.93** | ✅ Fast alternative to XGBoost |
 
 **Why tree models excel:**
@@ -110,10 +132,11 @@ python pipeline/run_phase9.py
 
 This will:
 1. Load and preprocess data ✓
-2. Train 4 models (Linear, Ridge, RF, GB, XGB if installed)
+2. Train baseline models with 5-fold CV
+3. Run 20-iteration RandomizedSearchCV for XGBoost
 3. Rank them by R² score
-4. Generate predictions vs actual plot
-5. Generate feature importance plot
+4. Generate predicted-vs-actual and residual plots
+5. Generate model and permutation feature importance plots
 
 **Output files:**
 - `model_evaluation.png` - Predictions and residuals
@@ -174,12 +197,12 @@ DATASET_SUMMARY.md                  ← Complete documentation
 ### Immediate (Next 30 minutes)
 1. ✅ Run `python pipeline/run_phase9.py`
 2. ✅ Review the feature importance plot
-3. ✅ Note the best model (likely XGBoost or RF)
+3. ✅ Note the best model (currently Random Forest)
 
 ### Short-term (Next few hours)
-1. Hyperparameter tuning (GridSearchCV)
-2. Cross-validation (5-fold CV)
-3. Create predictions on new queries
+1. Deploy the saved model in the API
+2. Add inference pipeline for new SQL text
+3. Optionally scale the catalog to 200 queries / 8000 rows
 
 ### Medium-term (Optional)
 1. SHAP explainability analysis
@@ -192,12 +215,12 @@ DATASET_SUMMARY.md                  ← Complete documentation
 
 You have a **complete, professional ML pipeline** with:
 - ✅ 4000 training samples
-- ✅ 8 carefully engineered features
+- ✅ richer structural, plan, and interaction features
 - ✅ Log-transformed target variable
 - ✅ Reproducible preprocessing
 - ✅ Ready-to-use training script
 
-**Expected outcomes:** R² of 0.80–0.93 with tree-based models.
+**Measured outcome:** R² of 0.9053 with the current Random Forest model.
 
 This level of pipeline would impress any ML team or interviewer.
 

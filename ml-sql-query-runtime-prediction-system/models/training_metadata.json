@@ -1,5 +1,5 @@
 {
-  "best_model_name": "XGBoost",
+  "best_model_name": "Random Forest",
   "target_column": "execution_time",
   "target_transform": "log1p",
   "feature_names": [
@@ -10,12 +10,22 @@
     "group_by_present",
     "order_by_present",
     "subquery_depth",
+    "query_length",
+    "token_count",
     "estimated_cost",
     "rows_scanned",
     "operator_count",
     "scan_count",
     "join_count",
     "index_usage",
+    "hash_join_count",
+    "filter_operator_count",
+    "projection_count",
+    "aggregate_operator_count",
+    "join_filter_complexity",
+    "join_table_ratio",
+    "aggregation_density",
+    "scan_join_interaction",
     "query_category_aggregation_query",
     "query_category_analytical_query",
     "query_category_filter_query",
@@ -25,8 +35,11 @@
   ],
   "test_size": 800,
   "metrics": {
-    "mae": 0.013064883140948457,
-    "rmse": 0.02929431165460143,
-    "r2": 0.8372355620857219
-  }
+    "mae": 0.006290759712231111,
+    "rmse": 0.022348914455771914,
+    "r2": 0.9052660177097512,
+    "cv_mean_r2": 0.8962657072587419,
+    "cv_std_r2": 0.02319426748389641
+  },
+  "best_params": {}
 }

@@ -18,6 +18,7 @@ except ModuleNotFoundError:
 DEFAULT_DB_PATH = Path("data") / "tpch.db"
 DEFAULT_QUERIES_DIR = Path("queries")
 DEFAULT_TARGET_QUERY_COUNT = 100
+MAX_TARGET_QUERY_COUNT = 200
 
 CATEGORY_ORDER = [
     "single_table",
@@ -414,9 +415,64 @@ def generated_query_candidates() -> list[dict[str, Any]]:
             """,
         ),
     ]
-    join_thresholds = [0.01, 0.03, 0.05, 0.07, 1000, 5000, 10000]
+    join_thresholds = [0.01, 0.03, 0.05, 0.07, 1000, 5000, 10000, 25000, 50000, 100000]
     for tables, complexity, template in join_templates:
         for threshold in join_thresholds:
+            entries.append(
+                make_query(
+                    f"g{idx:03d}",
+                    "join_query",
+                    tables,
+                    complexity,
+                    template.format(threshold=threshold),
+                )
+            )
+            idx += 1
+
+    extra_join_templates = [
+        (
+            ["customer", "orders", "lineitem"],
+            "high",
+            """
+            SELECT c.c_custkey, o.o_orderkey, l.l_linenumber, l.l_extendedprice
+            FROM customer c
+            JOIN orders o ON c.c_custkey = o.o_custkey
+            JOIN lineitem l ON o.o_orderkey = l.l_orderkey
+            WHERE o.o_totalprice > {threshold}
+            ORDER BY l.l_extendedprice DESC
+            LIMIT 120
+            """,
+        ),
+        (
+            ["nation", "supplier", "partsupp"],
+            "medium",
+            """
+            SELECT n.n_name, s.s_name, ps.ps_partkey, ps.ps_supplycost
+            FROM nation n
+            JOIN supplier s ON n.n_nationkey = s.s_nationkey
+            JOIN partsupp ps ON s.s_suppkey = ps.ps_suppkey
+            WHERE ps.ps_supplycost > {threshold}
+            ORDER BY ps.ps_supplycost DESC
+            LIMIT 120
+            """,
+        ),
+        (
+            ["orders", "lineitem", "part"],
+            "high",
+            """
+            SELECT o.o_orderkey, p.p_name, l.l_quantity, l.l_extendedprice
+            FROM orders o
+            JOIN lineitem l ON o.o_orderkey = l.l_orderkey
+            JOIN part p ON l.l_partkey = p.p_partkey
+            WHERE l.l_quantity > {threshold}
+            ORDER BY l.l_extendedprice DESC
+            LIMIT 120
+            """,
+        ),
+    ]
+    extra_join_thresholds = [1, 5, 10, 25, 50, 100, 500, 1000, 5000, 10000]
+    for tables, complexity, template in extra_join_templates:
+        for threshold in extra_join_thresholds:
             entries.append(
                 make_query(
                     f"g{idx:03d}",
@@ -834,6 +890,11 @@ def build_queries(
     target_count: int = DEFAULT_TARGET_QUERY_COUNT,
 ) -> tuple[list[dict[str, Any]], list[tuple[str, str]]]:
     """Generate, validate, balance, and persist query catalog and SQL artifacts."""
+    if target_count <= 0:
+        raise ValueError("target_count must be greater than zero")
+    if target_count > MAX_TARGET_QUERY_COUNT:
+        raise ValueError(f"target_count must be <= {MAX_TARGET_QUERY_COUNT}")
+
     queries_root = Path(queries_dir)
     base_dir = queries_root / "base_queries"
     generated_dir = queries_root / "generated_queries"
@@ -889,7 +950,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Generate and validate catalog-based SQL workload.")
     parser.add_argument("--db-path", default=str(DEFAULT_DB_PATH), help="Path to DuckDB database file")
     parser.add_argument("--queries-dir", default=str(DEFAULT_QUERIES_DIR), help="Queries root directory")
-    parser.add_argument("--target-count", type=int, default=DEFAULT_TARGET_QUERY_COUNT, help="Target query count")
+    parser.add_argument(
+        "--target-count",
+        type=int,
+        default=DEFAULT_TARGET_QUERY_COUNT,
+        help=f"Target query count (max {MAX_TARGET_QUERY_COUNT})",
+    )
     return parser
 
 

@@ -1,18 +1,17 @@
 # Project Completion Summary - ML SQL Query Runtime Predictor
 
 ## Overview
-Successfully built a complete machine learning pipeline to predict SQL query execution times using structural analysis and execution plan metrics. Dataset is production-ready with 4000 training samples.
+The project now includes a complete data pipeline plus a strengthened modeling pipeline. The latest improvement pass added richer DuckDB plan parsing, query-text complexity features, interaction features, 5-fold cross-validation, and XGBoost tuning. The result is a production-ready dataset and a best-model score of `R² = 0.9053`.
 
 ---
 
-## Project Architecture
+## Current Architecture
 
 ```
-Input Data → Feature Engineering → ML Training Dataset
-   ↓              ↓                      ↓
-100 SQL      Structural Features   4000 Rows
-Queries      + Plan Metrics        + 15 Features
-(TPC-H)      + Runtime Metadata    + Target Variable
+Input Data → Feature Engineering → ML Training Dataset → Model Training → Explainability
+   ↓              ↓                      ↓                  ↓                ↓
+100 SQL      Structural + Text      4000 Rows          Random Forest      SHAP +
+Queries      + Plan + Interaction   28 Columns         R² = 0.9053        Importance Plots
 ```
 
 ---
@@ -53,15 +52,20 @@ Queries      + Plan Metrics        + 15 Features
 - `9945359` - Phase 6.5: Feature expansion (critical alignment)
 
 ### Phase 7: Plan Metrics Extraction
-- ✅ Parsed 100 execution plans using regex patterns
-- ✅ Extracted 6 plan-based features:
-  - `estimated_cost`, `rows_scanned`, `operator_count`
-  - `scan_count`, `join_count`, `index_usage`
+- ✅ Parsed 100 execution plans using DuckDB-specific operator patterns
+- ✅ Extracted 10 plan-based features:
+   - `estimated_cost`, `rows_scanned`, `operator_count`, `scan_count`, `join_count`, `index_usage`
+   - `hash_join_count`, `filter_operator_count`, `projection_count`, `aggregate_operator_count`
 - ✅ Generated `plan_metrics_100.csv` (100 rows)
 
 ### Phase 8: Final Dataset Construction
 - ✅ Merged all features (expanded + plan metrics) into single dataset
-- ✅ Generated `ml_training_dataset.csv` (4000 rows × 18 columns)
+- ✅ Added interaction features:
+   - `join_filter_complexity`
+   - `join_table_ratio`
+   - `aggregation_density`
+   - `scan_join_interaction`
+- ✅ Generated `ml_training_dataset.csv` (4000 rows × 28 columns)
 - ✅ 100% data quality (no missing values)
 
 **Commits:**
@@ -73,7 +77,7 @@ Queries      + Plan Metrics        + 15 Features
 
 ### File: `data/ml_training_dataset.csv`
 
-**Dimensions:** 4000 rows × 18 columns
+**Dimensions:** 4000 rows × 28 columns
 
 **Column Breakdown:**
 
@@ -83,34 +87,41 @@ Queries      + Plan Metrics        + 15 Features
 | Measurement ID | run_number | 1 |
 | **TARGET VARIABLE** | **execution_time** | **1** |
 | Context | query_category, tables_used | 2 |
-| **Structural Features** | number_of_tables, number_of_joins, number_of_filters, aggregation_count, group_by_present, order_by_present, subquery_depth | **7** |
-| **Plan Features** | estimated_cost, rows_scanned, operator_count, scan_count, join_count, index_usage | **6** |
-| | | **18 TOTAL** |
+| **Structural Features** | number_of_tables, number_of_joins, number_of_filters, aggregation_count, group_by_present, order_by_present, subquery_depth, query_length, token_count | **9** |
+| **Plan Features** | estimated_cost, rows_scanned, operator_count, scan_count, join_count, index_usage, hash_join_count, filter_operator_count, projection_count, aggregate_operator_count | **10** |
+| **Interaction Features** | join_filter_complexity, join_table_ratio, aggregation_density, scan_join_interaction | **4** |
+| | | **28 TOTAL** |
 
-### ⚠️ IMPORTANT: Plan Metrics Reality Check
+### Improved Plan Metrics
 
-Phase 7 analysis revealed that **most plan metrics are 0** due to DuckDB's plan format not matching the regex patterns:
-- `operator_count`: 0 (pattern mismatch - DuckDB uses `SEQ_SCAN`, `HASH_JOIN`, etc.)
-- `rows_scanned`: 0 (no cardinality in EXPLAIN)
-- `estimated_cost`: 0 (no cost model in DuckDB EXPLAIN)
-- `join_count`: 0 (pattern not detected in DuckDB plans)
-- `index_usage`: 0 (TPC-H uses full table scans)
+The DuckDB parser now recognizes real operator labels from execution plans, including:
+- `SEQ_SCAN`
+- `TABLE_SCAN`
+- `HASH_JOIN`
+- `FILTER`
+- `PROJECTION`
+- `HASH_GROUP_BY`
+- `PERFECT_HASH_GROUP_BY`
+- `UNGROUPED_AGGREGATE`
 
-**Only one plan feature has signal:**
-- `scan_count`: 0-6 (reliable, mean: 2.60) ✅
+This improvement turned plan parsing from mostly-zero features into real signals:
+- `rows_scanned`: strong signal and top model feature
+- `operator_count`: non-zero and informative
+- `hash_join_count`: aligns with join-heavy queries
+- `filter_operator_count`, `projection_count`, `aggregate_operator_count`: now populated
 
 ### Effective Feature Set for ML Training
 
-**You will actually train on: 8 features + context**
+**Current model input after preprocessing: 29 encoded features**
 
 | Feature Type | Columns | Count |
 |--------------|---------|-------|
-| **Structural (SQL parsing)** | number_of_tables, number_of_joins, number_of_filters, aggregation_count, group_by_present, order_by_present, subquery_depth | **7** |
-| **Plan (reliable)** | scan_count | **1** |
-| **Context (for analysis)** | query_category, tables_used | **2** |
-| **Target** | execution_time | **1** |
+| Structural SQL features | 9 | 9 |
+| Execution plan features | 10 | 10 |
+| Interaction features | 4 | 4 |
+| Encoded query categories | 6 | 6 |
 
-This is **still excellent** for tree-based models (Random Forest, XGBoost typically perform best on 8-15 features).
+The improved pipeline now has enough signal for strong ensemble-model performance. The current best model is `Random Forest` with `R² = 0.9053`.
 
 ### Target Variable Statistics
 
@@ -141,24 +152,22 @@ df["log_runtime"] = np.log1p(df["execution_time"])
 
 This significantly improves regression stability and MAE/RMSE metrics.
 
-### Feature Ranges
+### Feature Highlights
 
-**Structural Features** (from query parsing - ALL USEFUL ✅):
-- `number_of_tables`: 1-3 (mean: 1.48)
-- `number_of_joins`: 0-2 (mean: 0.48)
-- `number_of_filters`: 0-2 (mean: 1.06)
-- `aggregation_count`: 0-3 (mean: 0.69)
-- `group_by_present`: 0-1 (mean: 0.12)
-- `order_by_present`: 0-1 (mean: 0.88)
-- `subquery_depth`: 0-1 (mean: 0.11)
+**Structural and query-text features:**
+- `query_length` and `token_count` are now included alongside the original 7 structural features
+- these capture textual and syntactic complexity beyond joins and filters
 
-**Plan Features** (from EXPLAIN parsing - MOSTLY ZEROS):
-- `estimated_cost`: 0.0 (no cost model in DuckDB EXPLAIN)
-- `rows_scanned`: 0 (no row estimates in EXPLAIN)
-- `operator_count`: 0 (pattern mismatch with DuckDB format)
-- `scan_count`: **0-6 (mean: 2.60)** ✅ **ONLY RELIABLE PLAN FEATURE**
-- `join_count`: 0 (pattern not detected)
-- `index_usage`: 0 (TPC-H uses full table scans)
+**Plan features:**
+- `rows_scanned` became a major feature in the improved model
+- `operator_count`, `projection_count`, and `hash_join_count` now carry real signal
+- `scan_count` remains useful, but it is no longer the only informative plan feature
+
+**Interaction features:**
+- `join_filter_complexity`
+- `join_table_ratio`
+- `aggregation_density`
+- `scan_join_interaction`
 
 ---
 
@@ -226,18 +235,18 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 
 ---
 
-## Expected Model Performance
+## Current Model Performance
 
-Based on dataset characteristics (8 features, 4000 samples, tree-friendly structure):
+After the feature-engineering and training improvements:
 
 | Model | R² (typical) | Notes |
 |-------|--------------|-------|
-| Linear Regression | 0.45–0.60 | Baseline - linear assumptions fail |
-| Ridge Regression | 0.50–0.65 | Slightly better regularization |
-| Random Forest | 0.75–0.90 | **Recommended** - usually best |
-| Gradient Boosting | 0.80–0.92 | **Excellent** - XGBoost/LightGBM |
-| XGBoost | 0.85–0.93 | **Best** - state-of-the-art |
-| Neural Network | 0.70–0.85 | Requires feature scaling |
+| Linear Regression | 0.8197 | Stronger with richer features, but still not best |
+| Ridge Regression | 0.8199 | Slightly improved baseline |
+| Gradient Boosting | 0.9050 | Excellent |
+| XGBoost Baseline | 0.9049 | Excellent |
+| XGBoost Tuned | 0.9049 | Competitive after 20-search tuning |
+| **Random Forest** | **0.9053** | **Current best model** |
 
 **Why tree models excel here:**
 - Mixed feature types (categorical + numeric)
@@ -259,12 +268,12 @@ y = np.log1p(df['execution_time'])  # Log transform
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 ```
 
-✅ **Model Candidates (Ranked by Expected Performance)**
-1. **XGBoost** - Best for this dataset structure
-2. **LightGBM** - Faster alternative to XGBoost
-3. **Random Forest** - Simpler, still excellent
-4. **Gradient Boosting** - Solid ensemble approach
-5. Linear Regression - Baseline only
+✅ **Model Candidates (Observed on the improved dataset)**
+1. **Random Forest** - Current best on held-out test data
+2. **Gradient Boosting** - Nearly identical performance
+3. **XGBoost / tuned XGBoost** - Strong alternatives
+4. **LightGBM** - Reasonable next candidate if added later
+5. Linear / Ridge - useful baselines only
 
 ✅ **Preprocessing Steps**
 - Drop: query_id, run_number, tables_used
@@ -292,7 +301,7 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 - `data/plan_metrics_100.csv` - 100 rows, plan metrics
 
 ### **FINAL OUTPUT**
-- **`data/ml_training_dataset.csv`** - Ready for ML training (4000 rows, 18 columns)
+- **`data/ml_training_dataset.csv`** - Ready for ML training (4000 rows, 28 columns)
 
 ### Code
 - `features/feature_extractor.py` - Structural feature extraction (sqlglot)
@@ -445,14 +454,14 @@ Training Dataset: ml_training_dataset.csv
 
 ---
 
-## Status: ✅ DATASET COMPLETE AND READY FOR ML TRAINING
+## Status: ✅ IMPROVED DATASET, MODEL, AND EXPLAINABILITY PIPELINE COMPLETE
 
 ### What You Have Right Now
 
 ```
 ✅ 4000 training samples
-✅ 8 effective features (7 structural + 1 plan)
-✅ 1 skewed target variable (requires log transform)
+✅ 29 encoded training features after preprocessing
+✅ 1 skewed target variable (log transform used)
 ✅ 100% data quality (no missing values)
 ✅ Reproducible pipeline (all scripts committed)
 ✅ Professional-grade architecture
@@ -461,22 +470,21 @@ Training Dataset: ml_training_dataset.csv
 ### Known Limitations & Future Improvements
 
 **Plan Metrics Limitation:**
-- Most plan features returned 0 due to regex pattern mismatch
-- Only `scan_count` is currently reliable
-- Future: Tune regexes for DuckDB's specific operators (`SEQ_SCAN`, `HASH_JOIN`, etc.)
+- `estimated_cost` and `index_usage` are still weak because DuckDB does not expose classic cost-model output here
+- `rows_scanned` is inferred from plan text and may not be exact cardinality
+- More operator families could still be added if needed
 
-**Feature Set is Still Excellent:**
-- 8 features is sufficient for strong model performance
-- Structural features (7) are high-quality and reliable
-- Tree-based models (XGBoost, Random Forest) will excel
+**Feature Set Status:**
+- the feature set is now materially stronger than the original baseline
+- tree-based models are already performing in the target deployment range
 
 ### Expected Outcomes
 
-| Metric | Target | Realistic Range |
+| Metric | Target | Current / Realistic |
 |--------|--------|-----------------|
-| R² Score | > 0.80 | 0.75–0.93 |
-| MAE (log₁₀) | < 0.1 | 0.05–0.15 |
-| Model Type | Ensemble | XGBoost/RF |
+| R² Score | > 0.80 | 0.9053 / 0.88–0.92 |
+| MAE (log scale) | < 0.1 | 0.0063 / 0.005–0.02 |
+| Model Type | Ensemble | Random Forest / XGBoost |
 
 ### Critical Success Factors
 

@@ -1,15 +1,15 @@
-"""Verify final ML training dataset"""
+"""Verify final ML training dataset."""
 
 import pandas as pd
 
-df = pd.read_csv('data/ml_training_dataset.csv')
+df = pd.read_csv("data/ml_training_dataset.csv")
 
 print('='*70)
 print('FINAL ML TRAINING DATASET - VERIFICATION')
 print('='*70)
 
 print(f'\nShape: {df.shape}')
-print(f'Rows: {len(df)} (100 queries × 40 runs)')
+print(f'Rows: {len(df)} ({df["query_id"].nunique()} queries × {len(df) // df["query_id"].nunique()} runs)')
 print(f'Columns: {len(df.columns)}')
 
 print('\nColumn List:')
@@ -19,7 +19,7 @@ for i, col in enumerate(df.columns, 1):
 
 print('\nData Quality Checks:')
 print(f'  ✓ Missing values: {df.isnull().sum().sum()}')
-print(f'  ✓ Unique queries: {df["query_id"].nunique()} / 100')
+print(f'  ✓ Unique queries: {df["query_id"].nunique()}')
 print(f'  ✓ Runs per query: {len(df) // df["query_id"].nunique()}')
 
 print('\n' + '='*70)
@@ -46,17 +46,30 @@ for col in meta_cols:
     print(f'  - {col}')
 
 # Structural features
-struct_cols = ['number_of_tables', 'number_of_joins', 'number_of_filters', 
-               'aggregation_count', 'group_by_present', 'order_by_present', 'subquery_depth']
+struct_cols = [
+    'number_of_tables', 'number_of_joins', 'number_of_filters',
+    'aggregation_count', 'group_by_present', 'order_by_present',
+    'subquery_depth', 'query_length', 'token_count'
+]
 print(f'\nStructural Features ({len(struct_cols)}):')
 for col in struct_cols:
     print(f'  - {col}: min={df[col].min()}, max={df[col].max()}, mean={df[col].mean():.2f}')
 
 # Plan features
-plan_cols = ['estimated_cost', 'rows_scanned', 'operator_count', 
-             'scan_count', 'join_count', 'index_usage']
+plan_cols = [
+    'estimated_cost', 'rows_scanned', 'operator_count', 'scan_count',
+    'join_count', 'index_usage', 'hash_join_count', 'filter_operator_count',
+    'projection_count', 'aggregate_operator_count'
+]
 print(f'\nExecution Plan Features ({len(plan_cols)}):')
 for col in plan_cols:
+    print(f'  - {col}: min={df[col].min()}, max={df[col].max()}, mean={df[col].mean():.2f}')
+
+interaction_cols = [
+    'join_filter_complexity', 'join_table_ratio', 'aggregation_density', 'scan_join_interaction'
+]
+print(f'\nInteraction Features ({len(interaction_cols)}):')
+for col in interaction_cols:
     print(f'  - {col}: min={df[col].min()}, max={df[col].max()}, mean={df[col].mean():.2f}')
 
 print('\n' + '='*70)

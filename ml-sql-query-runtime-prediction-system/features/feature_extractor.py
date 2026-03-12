@@ -6,14 +6,18 @@ from typing import Any
 import pandas as pd
 import sqlglot
 from sqlglot import expressions as exp
+from sqlglot.tokens import Tokenizer
 
 DEFAULT_FEATURES_PATH = Path(__file__).parent.parent / "data" / "features_dataset.csv"
 DEFAULT_EXECUTION_PATH = Path(__file__).parent.parent / "data" / "query_execution_dataset.csv"
+TOKENIZER = Tokenizer()
 
 
 def extract_structural_features(query_text: str) -> dict[str, Any]:
-    """Extract basic structural SQL features from a query string."""
-    tree = sqlglot.parse_one(query_text)
+    """Extract structural and textual SQL features from a query string."""
+    normalized_query = query_text.strip()
+    tree = sqlglot.parse_one(normalized_query)
+    tokens = TOKENIZER.tokenize(normalized_query)
 
     table_count = len(list(tree.find_all(exp.Table)))
     join_count = len(list(tree.find_all(exp.Join)))
@@ -32,6 +36,8 @@ def extract_structural_features(query_text: str) -> dict[str, Any]:
         "group_by_present": group_by_present,
         "order_by_present": order_by_present,
         "subquery_depth": subquery_count,
+        "query_length": len(normalized_query),
+        "token_count": len(tokens),
     }
 
 
@@ -46,20 +52,18 @@ def process_execution_dataset(
 ) -> pd.DataFrame:
     """Load execution dataset and extract structural features for each query."""
     execution_df = pd.read_csv(execution_path)
-    
+
     features_list = []
-    for idx, row in execution_df.iterrows():
+    for _, row in execution_df.iterrows():
         query_text = row["query_text"]
         structural_features = extract_structural_features(query_text)
-        
-        # Combine structural features with query metadata
         combined = {
             "query_id": row["query_id"],
             "runtime": row["runtime"],
             **structural_features,
         }
         features_list.append(combined)
-    
+
     return pd.DataFrame(features_list)
 
 
