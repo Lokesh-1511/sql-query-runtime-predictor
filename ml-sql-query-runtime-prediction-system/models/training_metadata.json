@@ -1,0 +1,32 @@
+{
+  "best_model_name": "XGBoost",
+  "target_column": "execution_time",
+  "target_transform": "log1p",
+  "feature_names": [
+    "number_of_tables",
+    "number_of_joins",
+    "number_of_filters",
+    "aggregation_count",
+    "group_by_present",
+    "order_by_present",
+    "subquery_depth",
+    "estimated_cost",
+    "rows_scanned",
+    "operator_count",
+    "scan_count",
+    "join_count",
+    "index_usage",
+    "query_category_aggregation_query",
+    "query_category_analytical_query",
+    "query_category_filter_query",
+    "query_category_group_by_query",
+    "query_category_join_query",
+    "query_category_single_table"
+  ],
+  "test_size": 800,
+  "metrics": {
+    "mae": 0.013064883140948457,
+    "rmse": 0.02929431165460143,
+    "r2": 0.8372355620857219
+  }
+}

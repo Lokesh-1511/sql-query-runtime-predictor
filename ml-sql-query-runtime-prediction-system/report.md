@@ -301,3 +301,62 @@ Status: Completed
   - Mean: 0.040879 seconds
   - Median: 0.008878 seconds
   - Std Dev: 0.093723 seconds (wide variance = good for regression)
+
+## Phase 9 - ML Model Training and Evaluation
+Date: 2026-03-12
+Status: Completed
+
+### Completed Work
+- Extended `pipeline/run_phase9.py` into a fully reproducible training pipeline.
+- Added model persistence and evaluation artifact generation:
+  - `models/best_runtime_model.joblib`
+  - `models/training_metadata.json`
+  - `data/phase9_model_results.csv`
+  - `data/phase9_best_model_predictions.csv`
+- Trained and compared five regression models on the log-transformed target:
+  - Linear Regression
+  - Ridge Regression
+  - Random Forest Regressor
+  - Gradient Boosting Regressor
+  - XGBoost Regressor
+- Saved evaluation plots:
+  - `model_evaluation.png`
+  - `feature_importance.png`
+
+### Execution Outcome
+- Input: `data/ml_training_dataset.csv` (4000 rows, 18 columns)
+- Preprocessing:
+  - dropped `query_id`, `run_number`, `tables_used`
+  - one-hot encoded `query_category`
+  - log-transformed `execution_time` using `log1p`
+- Best model: `XGBoost`
+- Metrics on held-out test split:
+  - `R² = 0.8372`
+  - `MAE = 0.013065` (log scale)
+  - `RMSE = 0.029294` (log scale)
+- Top model signals from feature importance:
+  - `subquery_depth`
+  - `number_of_filters`
+  - `number_of_tables`
+  - `aggregation_count`
+  - `scan_count`
+
+## Phase 10 - Explainability Analysis with SHAP
+Date: 2026-03-12
+Status: Completed
+
+### Completed Work
+- Added `pipeline/run_phase10.py` to generate explainability artifacts from the persisted Phase 9 model.
+- Implemented SHAP-based feature attribution workflow using `TreeExplainer`.
+- Reused deterministic preprocessing from Phase 9 to ensure explainability matches the trained feature space.
+- Saved explainability outputs:
+  - `data/phase10_shap_values.csv`
+  - `data/phase10_shap_feature_importance.csv`
+  - `shap_summary.png`
+  - `shap_importance_bar.png`
+
+### Execution Outcome
+- Loaded best model artifact: `models/best_runtime_model.joblib`
+- Explained the held-out test split (`800` rows)
+- Produced global SHAP importance rankings for all `19` encoded features
+- Established an explainability path for demos, feature review, and deployment validation

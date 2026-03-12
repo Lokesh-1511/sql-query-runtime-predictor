@@ -498,3 +498,71 @@ Environment: `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.e
 ### Commands Used
 - `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.exe pipeline/run_phase8.py`
 - Inline pandas verification for dataset shape, nulls, and type composition
+
+## Phase 9 - ML Training Tests
+Date: 2026-03-12
+Status: Passed
+Environment: `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.exe`
+
+### Test Cases and Results
+1. Training pipeline preprocessing validation
+- Target: `pipeline/run_phase9.py`
+- Check: drop non-predictive columns, one-hot encode category, log-transform target
+- Result: Passed
+- Output:
+  - `Loaded 4000 samples × 18 columns`
+  - `New shape after encoding: (4000, 20)`
+  - `Features: 19`
+
+2. Multi-model training benchmark
+- Target: `pipeline/run_phase9.py`
+- Check: train five regressors and compare held-out metrics
+- Result: Passed
+- Output:
+  - `XGBoost R² = 0.8372`
+  - `Gradient Boosting R² = 0.8372`
+  - `Random Forest R² = 0.8372`
+  - `Ridge Regression R² = 0.6191`
+  - `Linear Regression R² = 0.6188`
+
+3. Model artifact persistence
+- Target: `models/best_runtime_model.joblib`, `models/training_metadata.json`
+- Check: save best model and schema for downstream phases
+- Result: Passed
+
+4. Visualization and prediction outputs
+- Target: `model_evaluation.png`, `feature_importance.png`, `data/phase9_model_results.csv`, `data/phase9_best_model_predictions.csv`
+- Check: save reproducible evaluation artifacts
+- Result: Passed
+
+### Commands Used
+- `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.exe pipeline/run_phase9.py`
+
+## Phase 10 - SHAP Explainability Tests
+Date: 2026-03-12
+Status: Passed
+Environment: `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.exe`
+
+### Test Cases and Results
+1. Phase 9 artifact loading
+- Target: `pipeline/run_phase10.py`
+- Check: load persisted best model and training metadata
+- Result: Passed
+
+2. Deterministic test-set reconstruction
+- Target: `pipeline/run_phase10.py` with `load_and_prepare_data()`
+- Check: reproduce the same held-out split used for evaluation
+- Result: Passed (`800` rows explained)
+
+3. SHAP value generation
+- Target: `data/phase10_shap_values.csv`, `data/phase10_shap_feature_importance.csv`
+- Check: compute per-row SHAP values and global feature importances
+- Result: Passed
+
+4. Explainability plots
+- Target: `shap_summary.png`, `shap_importance_bar.png`
+- Check: generate reusable demo and analysis visuals
+- Result: Passed
+
+### Commands Used
+- `e:/ML_Project/sql-query-runtime-predictor/.venv-1/Scripts/python.exe pipeline/run_phase10.py`
