@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 import sqlglot
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sqlglot import expressions as exp
 
@@ -42,6 +43,13 @@ class PredictionResponse(BaseModel):
 	target_transform: str
 	query_category: str
 	tables_used: list[str]
+	number_of_tables: int
+	number_of_joins: int
+	number_of_filters: int
+	aggregation_count: int
+	subquery_depth: int
+	query_depth: int
+	scan_count: int
 	explain_mode: str
 	top_feature_values: dict[str, float | int]
 
@@ -50,6 +58,15 @@ app = FastAPI(
 	title="SQL Query Runtime Predictor API",
 	description="API for ML-based SQL runtime prediction.",
 	version="0.2.0",
+)
+
+# Enable CORS for frontend
+app.add_middleware(
+	CORSMiddleware,
+	allow_origins=["http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:5173", "http://127.0.0.1:5174"],
+	allow_credentials=True,
+	allow_methods=["*"],
+	allow_headers=["*"],
 )
 
 
@@ -106,7 +123,10 @@ def build_plan_text(conn: duckdb.DuckDBPyConnection, sql_query: str, include_ana
 	return "[EXPLAIN]\n" + explain_text + "\n\n[EXPLAIN ANALYZE]\n" + analyze_text
 
 
-def build_feature_row(sql_query: str, include_explain_analyze: bool) -> tuple[pd.DataFrame, str, list[str], dict[str, float | int]]:
+def build_feature_row(
+	sql_query: str,
+	include_explain_analyze: bool,
+) -> tuple[pd.DataFrame, str, list[str], dict[str, float | int], dict[str, int]]:
 	"""Create one model-ready feature row aligned to training metadata feature order."""
 	model, metadata = load_model_bundle()
 	feature_names = metadata["feature_names"]
@@ -152,19 +172,33 @@ def build_feature_row(sql_query: str, include_explain_analyze: bool) -> tuple[pd
 	top_feature_values = {
 		key: row[key]
 		for key in [
+			"number_of_tables",
+			"number_of_joins",
 			"rows_scanned",
 			"operator_count",
 			"number_of_filters",
+			"aggregation_count",
 			"subquery_depth",
 			"query_length",
 			"token_count",
 			"join_filter_complexity",
 			"scan_count",
+			"join_count",
 		]
 		if key in row
 	}
 
-	return feature_df, query_category, tables_used, top_feature_values
+	display_features = {
+		"number_of_tables": int(round(features.get("number_of_tables", 0))),
+		"number_of_joins": int(round(features.get("number_of_joins", 0))),
+		"number_of_filters": int(round(features.get("number_of_filters", 0))),
+		"aggregation_count": int(round(features.get("aggregation_count", 0))),
+		"subquery_depth": int(round(features.get("subquery_depth", 0))),
+		"query_depth": int(round(features.get("subquery_depth", 0))),
+		"scan_count": int(round(features.get("scan_count", 0))),
+	}
+
+	return feature_df, query_category, tables_used, top_feature_values, display_features
 
 
 @app.get("/")
@@ -212,7 +246,7 @@ def predict_runtime(payload: PredictionRequest) -> PredictionResponse:
 	except FileNotFoundError as exc:
 		raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-	feature_df, query_category, tables_used, top_feature_values = build_feature_row(
+	feature_df, query_category, tables_used, top_feature_values, display_features = build_feature_row(
 		sql_query,
 		include_explain_analyze=payload.include_explain_analyze,
 	)
@@ -230,6 +264,13 @@ def predict_runtime(payload: PredictionRequest) -> PredictionResponse:
 		target_transform=str(metadata.get("target_transform", "none")),
 		query_category=query_category,
 		tables_used=tables_used,
+		number_of_tables=display_features["number_of_tables"],
+		number_of_joins=display_features["number_of_joins"],
+		number_of_filters=display_features["number_of_filters"],
+		aggregation_count=display_features["aggregation_count"],
+		subquery_depth=display_features["subquery_depth"],
+		query_depth=display_features["query_depth"],
+		scan_count=display_features["scan_count"],
 		explain_mode="EXPLAIN ANALYZE" if payload.include_explain_analyze else "EXPLAIN",
 		top_feature_values=top_feature_values,
 	)

@@ -13,20 +13,34 @@ DEFAULT_EXECUTION_PATH = Path(__file__).parent.parent / "data" / "query_executio
 TOKENIZER = Tokenizer()
 
 
+def _compute_subquery_depth(tree: exp.Expression) -> int:
+    """Return the maximum nested subquery depth (0 when no subquery exists)."""
+    max_depth = 0
+    for subquery in tree.find_all(exp.Subquery):
+        depth = 1
+        parent = subquery.parent
+        while parent is not None:
+            if isinstance(parent, exp.Subquery):
+                depth += 1
+            parent = parent.parent
+        max_depth = max(max_depth, depth)
+    return max_depth
+
+
 def extract_structural_features(query_text: str) -> dict[str, Any]:
     """Extract structural and textual SQL features from a query string."""
     normalized_query = query_text.strip()
     tree = sqlglot.parse_one(normalized_query)
     tokens = TOKENIZER.tokenize(normalized_query)
 
-    table_count = len(list(tree.find_all(exp.Table)))
+    table_count = len({table.name for table in tree.find_all(exp.Table) if table.name})
     join_count = len(list(tree.find_all(exp.Join)))
     where_clauses = list(tree.find_all(exp.Where))
     filter_count = sum(len(list(where.find_all(exp.Predicate))) for where in where_clauses)
     aggregation_count = len(list(tree.find_all(exp.AggFunc)))
     group_by_present = int(tree.find(exp.Group) is not None)
     order_by_present = int(tree.find(exp.Order) is not None)
-    subquery_count = len(list(tree.find_all(exp.Subquery)))
+    subquery_depth = _compute_subquery_depth(tree)
 
     return {
         "number_of_tables": table_count,
@@ -35,7 +49,7 @@ def extract_structural_features(query_text: str) -> dict[str, Any]:
         "aggregation_count": aggregation_count,
         "group_by_present": group_by_present,
         "order_by_present": order_by_present,
-        "subquery_depth": subquery_count,
+        "subquery_depth": subquery_depth,
         "query_length": len(normalized_query),
         "token_count": len(tokens),
     }
